@@ -42,23 +42,22 @@ Six correct/incorrect example pairs anchor the target style, so the model imitat
 
 ## Installation
 
-This plugin is a dsh bundle — install it with `dsh plugin`, no manual config editing:
+This plugin is a dsh bundle — install it directly from GitHub, no manual config editing:
 
 ```bash
-dsh plugin --profile web add <this-plugin>
+dsh plugin --profile web add github:Relethe/dsh-brief-session-title
 ```
 
-Three source forms:
+If the package is published to npm, the same command works with the package name:
 
 ```bash
-# from npm (once published)
 dsh plugin --profile web add dsh-brief-session-title
+```
 
-# from a local directory (relative paths resolve against your invoking directory)
+For a local checkout (relative paths resolve against your invoking directory):
+
+```bash
 dsh plugin --profile web add ./dsh-brief-session-title
-
-# from GitHub
-dsh plugin --profile web add github:<owner>/dsh-brief-session-title
 ```
 
 `dsh plugin` forwards its arguments to pnpm and then reconciles: because this package declares `dsh.bundle`, it joins the profile's bundle layer automatically, and the bundle's own `cordis.patch.yml` applies (disable the official title plugin + mount this one).
