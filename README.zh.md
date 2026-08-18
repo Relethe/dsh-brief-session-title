@@ -42,23 +42,22 @@ DSH 的会话标题由官方 `session-title-first-prompt-llm` 插件生成。它
 
 ## 安装
 
-本插件是一个 dsh bundle，用 `dsh plugin` 安装即可，无需手动改任何配置：
+本插件是一个 dsh bundle，直接通过 GitHub 安装即可，无需手动改任何配置：
 
 ```bash
-dsh plugin --profile web add <本插件>
+dsh plugin --profile web add github:Relethe/dsh-brief-session-title
 ```
 
-`<本插件>` 按来源三选一：
+发布到 npm 后，也可以用包名安装：
 
 ```bash
-# npm 发布后
 dsh plugin --profile web add dsh-brief-session-title
+```
 
-# 本地目录（相对路径以你执行命令的目录为基准，绝对路径直接传）
+本地目录安装（相对路径以你执行命令的目录为基准，绝对路径直接传）：
+
+```bash
 dsh plugin --profile web add ./dsh-brief-session-title
-
-# GitHub 仓库
-dsh plugin --profile web add github:<owner>/dsh-brief-session-title
 ```
 
 安装时 `dsh plugin` 会把参数转发给 pnpm，装完后自动对账：检测到本包声明了 `dsh.bundle`，就会把它加入 profile 的 bundle 层；bundle 自带的 `cordis.patch.yml` 随之自动应用（禁用官方标题插件 + 挂载本插件）。
