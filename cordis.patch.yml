@@ -1,0 +1,13 @@
+# dsh-brief-session-title bundle patch：作为 bundle 安装后由 dsh plugin 自动应用。
+# 按 id 关闭官方 first-prompt 标题插件，并挂载本插件（name 用包名，
+# Node 会从 profile 目录解析已安装的包）。
+- id: session-title-llm
+  name: '@deepseek-ai/dsh-session-title-first-prompt-llm'
+  disabled: true
+- insert:
+    - id: dsh-brief-session-title
+      name: 'dsh-brief-session-title'
+      config:
+        maxInputBytes: 4096
+        maxOutputTokens: 64
+        timeoutMs: 60000
