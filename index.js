@@ -37,7 +37,7 @@ const SYSTEM_PROMPT = [
   'a."解释一下JavaScript闭包到底是什么"',
   'b."用英语表达中国近代半文言文文法"',
   'c."中式微恐2.5D沙盒生存游戏系统PRD"',
-  'd,"Fixing Memory Leak in Node"',
+  'd."Fixing Memory Leak in Node"',
   'e."Database Schema Design Review"',
   'Correct Example:',
   'a."JS闭包浅说"',
