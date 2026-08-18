@@ -1,5 +1,7 @@
 # dsh-brief-session-title
 
+[English](README.md) | 中文
+
 DeepSeek Harness（DSH）会话标题精简插件：把「一句完整的话」压成「一个词」，便于回忆。
 
 ## 为什么做这个插件
