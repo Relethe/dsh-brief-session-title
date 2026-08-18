@@ -1,5 +1,7 @@
 # dsh-brief-session-title
 
+English | [中文](README.zh.md)
+
 A DeepSeek Harness (DSH) session-title plugin that condenses a full sentence into a single word for easier recall.
 
 ## Why this plugin
