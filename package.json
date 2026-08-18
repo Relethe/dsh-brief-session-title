@@ -10,5 +10,9 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-llm": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0",
+    "@deepseek-ai/dsh-session-title": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0"
   }
 }
