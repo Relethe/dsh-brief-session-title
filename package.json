@@ -1,11 +1,19 @@
 {
   "name": "dsh-brief-session-title",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
   "main": "./index.js",
   "exports": {
     ".": "./index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Relethe/dsh-brief-session-title.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Relethe/dsh-brief-session-title/issues"
+  },
+  "homepage": "https://github.com/Relethe/dsh-brief-session-title#readme",
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
