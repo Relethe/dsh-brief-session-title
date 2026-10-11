@@ -170,7 +170,9 @@ export function apply(ctx, config) {
       try {
         const messages = [createUserMessage({
           content: [{ type: 'text', text: framedInput }],
-          source: { kind: 'plugin', plugin: name },
+          // v4 会话格式拒绝已退休的 { kind: 'plugin', plugin } 封套；第三方
+          // 生产者必须用自己名下的 kind，约定为 plugin:<包名>。
+          source: { kind: `plugin:${name}` },
         })];
         const options = deepFreeze({
           provider: route.provider,
