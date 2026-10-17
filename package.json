@@ -1,6 +1,6 @@
 {
   "name": "dsh-brief-session-title",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "main": "./index.js",
   "exports": {
@@ -15,16 +15,25 @@
     "url": "https://github.com/Relethe/dsh-brief-session-title/issues"
   },
   "homepage": "https://github.com/Relethe/dsh-brief-session-title#readme",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
   },
+  "engines": {
+    "node": "^22.19 || >=24"
+  },
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0-0",
-    "@deepseek-ai/dsh-session-title": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0-0",
-    "@deepseek-ai/dsh-timeout": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0-0",
-    "@deepseek-ai/dsh-util-values": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0-0",
-    "@deepseek-ai/schemastery": ">=0.1.0-rc.6 <0.2.0-0 || >=0.2.0"
+    "@deepseek-ai/dsh-session-title": ">=0.2.0-0 <0.3.0-0",
+    "@deepseek-ai/dsh-session-title-llm": ">=0.2.0-0 <0.3.0-0",
+    "@deepseek-ai/dsh-timeout": ">=0.2.0-0 <0.3.0-0",
+    "@deepseek-ai/schemastery": ">=3.18.0"
   }
 }

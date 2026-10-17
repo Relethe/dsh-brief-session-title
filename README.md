@@ -35,10 +35,14 @@ Six correct/incorrect example pairs anchor the target style, so the model imitat
 
 ## Features
 
-- **Zero intrusion**: identical to the official `first-prompt-llm` logic (first human message, streaming generation, fallback on failure) — only the prompt changes;
-- **Auto take-over**: mutually exclusive with the official plugin; on load it shuts the official provider down and registers itself, so exactly one title generator stays active;
+- **No copied strategy code**: it registers a `first-prompt` provider and calls the official `generateSessionTitleWithLlm()` from `@deepseek-ai/dsh-session-title-llm`, so framing, byte/token caps, the timeout code, tool-call rejection, title normalization, and the `session/title-llm-request` log event all stay official; the only difference is the system prompt — both in the request sent to the model and in the logged event;
+- **Exactly one provider**: the bundle patch disables the official plugin, and the title service rejects a second registration, so two generators can never compete;
 - **Fail-safe**: on model error, timeout, or empty output, it falls back to the official deterministic fallback title;
 - **Configurable**: input byte cap, output token cap, and timeout are all tunable.
+
+## Compatibility
+
+Requires DSH 0.2.x (`@deepseek-ai/dsh-session-title*` >= 0.2.0-0). Because no strategy code is copied, official upgrades are picked up automatically; if the shared function signature changes, the plugin fails loudly instead of writing a malformed log event.
 
 ## Installation
 
@@ -72,6 +76,8 @@ dsh plugin --profile web add ./dsh-brief-session-title
 | `maxOutputTokens` | 64 | Output-token cap for the title request |
 | `timeoutMs` | 60000 | Per-request timeout in milliseconds |
 | `provider` / `model` | omitted | Supply both to use a dedicated route; omit to reuse the session's main-request route |
+
+`targetWords` / `targetCjkCharacters` are intentionally not exposed: the custom prompt fixes its own length rules, so those official knobs have nothing to configure here.
 
 ## Notes
 

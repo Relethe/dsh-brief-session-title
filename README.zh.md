@@ -35,10 +35,14 @@ DSH 的会话标题由官方 `session-title-first-prompt-llm` 插件生成。它
 
 ## 特性
 
-- **零侵入**：与官方 `first-prompt-llm` 逻辑完全一致（取第一条人类消息、流式生成、失败回落 fallback），只换提示词；
-- **自动接管**：与官方插件互斥，装载时自动关闭官方 provider，保证同一时间只有一个标题生成器；
+- **不复制策略代码**：注册一个 `first-prompt` 提供方，直接调用官方 `@deepseek-ai/dsh-session-title-llm` 的 `generateSessionTitleWithLlm()`；JSON 帧、字节/token 上限、超时原因码、tool-call 拒绝、标题归一化、`session/title-llm-request` 日志事件全部沿用官方实现，差异只有系统提示词——发给模型的那份和写入日志的那份一起换；
+- **唯一提供方**：bundle patch 关闭官方插件，标题服务本身也拒绝第二个注册，两个生成器不会并存；
 - **失败安全**：模型报错、超时、输出为空时，自动回落到官方确定性 fallback 标题，会话不会没标题；
 - **纯配置可调**：输入字节上限、输出 token 上限、超时时间均可配。
+
+## 兼容性
+
+要求 DSH 0.2.x（`@deepseek-ai/dsh-session-title*` >= 0.2.0-0）。因为不复制策略代码，官方升级会被自动继承；一旦共享函数签名变化，插件会直接报错，而不是写出不合规的会话日志事件。
 
 ## 安装
 
@@ -72,6 +76,8 @@ dsh plugin --profile web add ./dsh-brief-session-title
 | `maxOutputTokens` | 64 | 标题请求的输出 token 上限 |
 | `timeoutMs` | 60000 | 单次标题请求超时（毫秒） |
 | `provider` / `model` | 省略 | 同时给出则用独立路由生成标题；省略则复用当前会话主请求的路由 |
+
+`targetWords` / `targetCjkCharacters` 故意不开放：自定义提示词写死了自己的长度规则，官方这两个旋钮在这里没有可配的东西。
 
 ## 注意事项
 
