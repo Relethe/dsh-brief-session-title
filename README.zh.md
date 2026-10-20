@@ -35,33 +35,35 @@ DSH 的会话标题由官方 `session-title-first-prompt-llm` 插件生成。它
 
 ## 特性
 
-- **不复制策略代码**：注册一个 `first-prompt` 提供方，直接调用官方 `@deepseek-ai/dsh-session-title-llm` 的 `generateSessionTitleWithLlm()`；JSON 帧、字节/token 上限、超时原因码、tool-call 拒绝、标题归一化、`session/title-llm-request` 日志事件全部沿用官方实现，差异只有系统提示词——发给模型的那份和写入日志的那份一起换；
+- **不复制策略代码**：注册一个 `first-prompt` 提供方，直接调用官方 `@deepseek-ai/dsh-session-title-llm` 的 `executeSessionTitleLlm()`；输入字节上限、输出 token 上限、超时原因码、路由解析、`session/title-llm-request` 日志事件全部沿用官方实现，差异只有系统提示词和首行标题提取（与官方 first-prompt 插件同样的处理）；
 - **唯一提供方**：bundle patch 关闭官方插件，标题服务本身也拒绝第二个注册，两个生成器不会并存；
 - **失败安全**：模型报错、超时、输出为空时，自动回落到官方确定性 fallback 标题，会话不会没标题；
 - **纯配置可调**：输入字节上限、输出 token 上限、超时时间均可配。
 
 ## 兼容性
 
-要求 DSH 0.2.x（`@deepseek-ai/dsh-session-title*` >= 0.2.0-0）。因为不复制策略代码，官方升级会被自动继承；一旦共享函数签名变化，插件会直接报错，而不是写出不合规的会话日志事件。
+要求 DSH 0.2.1-rc.x（`@deepseek-ai/dsh-session-title*` >= 0.2.1-0）。DSH 0.2.1 把共享的 `generateSessionTitleWithLlm()` 换成了 `executeSessionTitleLlm()`，提示词组装与输出解析也回到 provider 侧；本版本针对该接口。若之后的 DSH 再次改动共享签名，插件会直接报错，而不是写出不合规的会话日志事件。
 
 ## 安装
 
 本插件是一个 dsh bundle，直接通过 GitHub 安装即可，无需手动改任何配置：
 
 ```bash
-dsh plugin --profile web add github:Relethe/dsh-brief-session-title
+dsh plugin --profile <name> add github:Relethe/dsh-brief-session-title
 ```
+
+`<name>` 是你要管理的 profile（`web`、`headless`、`desktop` 等）。桌面版也可以在侧边栏**插件**页完成同样的操作；两条路径都写 profile 的 `package.json`，并应用 bundle 自带的 patch 层。
 
 发布到 npm 后，也可以用包名安装：
 
 ```bash
-dsh plugin --profile web add dsh-brief-session-title
+dsh plugin --profile <name> add dsh-brief-session-title
 ```
 
 本地目录安装（相对路径以你执行命令的目录为基准，绝对路径直接传）：
 
 ```bash
-dsh plugin --profile web add ./dsh-brief-session-title
+dsh plugin --profile <name> add ./dsh-brief-session-title
 ```
 
 安装时 `dsh plugin` 会把参数转发给 pnpm，装完后自动对账：检测到本包声明了 `dsh.bundle`，就会把它加入 profile 的 bundle 层；bundle 自带的 `cordis.patch.yml` 随之自动应用（禁用官方标题插件 + 挂载本插件）。
@@ -83,7 +85,7 @@ dsh plugin --profile web add ./dsh-brief-session-title
 
 - **只影响之后的标题**：已存在会话的标题已落盘，不会自动重算；
 - **手动改名会钉住**：用户在 UI 里手动改过标题后，自动生成不再覆盖（DSH 官方行为）；
-- **还原方式**：`dsh plugin --profile web remove dsh-brief-session-title`，官方标题插件自动恢复。
+- **还原方式**：`dsh plugin --profile <name> remove dsh-brief-session-title`，官方标题插件自动恢复。
 
 ## 许可
 

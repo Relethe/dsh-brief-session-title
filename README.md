@@ -35,33 +35,35 @@ Six correct/incorrect example pairs anchor the target style, so the model imitat
 
 ## Features
 
-- **No copied strategy code**: it registers a `first-prompt` provider and calls the official `generateSessionTitleWithLlm()` from `@deepseek-ai/dsh-session-title-llm`, so framing, byte/token caps, the timeout code, tool-call rejection, title normalization, and the `session/title-llm-request` log event all stay official; the only difference is the system prompt — both in the request sent to the model and in the logged event;
+- **No copied strategy code**: it registers a `first-prompt` provider and calls the official `executeSessionTitleLlm()` from `@deepseek-ai/dsh-session-title-llm`, so input byte caps, output-token caps, the timeout code, route resolution, and the `session/title-llm-request` log event all stay official; the only differences are the system prompt and the first-line title extraction the official provider also performs;
 - **Exactly one provider**: the bundle patch disables the official plugin, and the title service rejects a second registration, so two generators can never compete;
 - **Fail-safe**: on model error, timeout, or empty output, it falls back to the official deterministic fallback title;
 - **Configurable**: input byte cap, output token cap, and timeout are all tunable.
 
 ## Compatibility
 
-Requires DSH 0.2.x (`@deepseek-ai/dsh-session-title*` >= 0.2.0-0). Because no strategy code is copied, official upgrades are picked up automatically; if the shared function signature changes, the plugin fails loudly instead of writing a malformed log event.
+Requires DSH 0.2.1-rc.x (`@deepseek-ai/dsh-session-title*` >= 0.2.1-0). DSH 0.2.1 replaced the shared `generateSessionTitleWithLlm()` helper with `executeSessionTitleLlm()` plus provider-owned prompt framing and output parsing; this build targets that interface. If a later DSH changes the shared signature again, the plugin fails loudly instead of writing a malformed log event.
 
 ## Installation
 
 This plugin is a dsh bundle — install it directly from GitHub, no manual config editing:
 
 ```bash
-dsh plugin --profile web add github:Relethe/dsh-brief-session-title
+dsh plugin --profile <name> add github:Relethe/dsh-brief-session-title
 ```
+
+`<name>` is the profile whose plugins you manage (`web`, `headless`, `desktop`, …). Desktop builds also expose the same operation from the sidebar **Plugins** page; both paths write the profile's `package.json` and apply the bundle's own patch layer.
 
 If the package is published to npm, the same command works with the package name:
 
 ```bash
-dsh plugin --profile web add dsh-brief-session-title
+dsh plugin --profile <name> add dsh-brief-session-title
 ```
 
 For a local checkout (relative paths resolve against your invoking directory):
 
 ```bash
-dsh plugin --profile web add ./dsh-brief-session-title
+dsh plugin --profile <name> add ./dsh-brief-session-title
 ```
 
 `dsh plugin` forwards its arguments to pnpm and then reconciles: because this package declares `dsh.bundle`, it joins the profile's bundle layer automatically, and the bundle's own `cordis.patch.yml` applies (disable the official title plugin + mount this one).
@@ -83,7 +85,7 @@ dsh plugin --profile web add ./dsh-brief-session-title
 
 - **New titles only**: existing sessions keep their stored titles;
 - **Manual renames pin**: a user-renamed title is never overwritten by automatic generation (official DSH behavior);
-- **To revert**: `dsh plugin --profile web remove dsh-brief-session-title` — the official title plugin resumes automatically.
+- **To revert**: `dsh plugin --profile <name> remove dsh-brief-session-title` — the official title plugin resumes automatically.
 
 ## License
 

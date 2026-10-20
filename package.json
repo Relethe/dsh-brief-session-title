@@ -1,6 +1,6 @@
 {
   "name": "dsh-brief-session-title",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "main": "./index.js",
   "exports": {
@@ -31,9 +31,9 @@
     "node": "^22.19 || >=24"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-session-title": ">=0.2.0-0 <0.3.0-0",
-    "@deepseek-ai/dsh-session-title-llm": ">=0.2.0-0 <0.3.0-0",
-    "@deepseek-ai/dsh-timeout": ">=0.2.0-0 <0.3.0-0",
+    "@deepseek-ai/dsh-session-title": ">=0.2.1-0 <0.3.0-0",
+    "@deepseek-ai/dsh-session-title-llm": ">=0.2.1-0 <0.3.0-0",
+    "@deepseek-ai/dsh-timeout": ">=0.2.1-0 <0.3.0-0",
     "@deepseek-ai/schemastery": ">=3.18.0"
   }
 }

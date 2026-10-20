@@ -8,20 +8,21 @@
  *  - tool-call 拒绝、空标题拒绝、normalizeSessionTitle 归一化；
  *  - 模型分发前写入 session/title-llm-request 的字段与 message source。
  *
- * 做法：本插件向 ctx.sessionTitle 注册一个 first-prompt 提供方，在 generate()
- * 里调用官方的 generateSessionTitleWithLlm()，只把两处系统提示词替换成本插件的：
- *  1. 真正发给模型的 system；
- *  2. 同一次调用写入 session/title-llm-request 日志的 system（模型可见 ⟺ 可重建，
- *     日志必须记录实际发送的提示词）。
- * 因此官方升级时，本插件不需要复制任何策略代码，只需跟随共享模块的函数签名。
+ * 适配 DSH 0.2.1-rc.x：共享库不再提供 generateSessionTitleWithLlm()，
+ * 改为 executeSessionTitleLlm(ctx, config, request, providerId, prepared)。
+ * prepared 由 provider 自己提供 system / input / messageSeqs / 推理档位选择，
+ * 输出解析（tool-call、max-tokens、首行提取）也回到 provider 侧。
+ *
+ * 因此官方升级时，本插件只需跟随共享模块的函数签名；提示词与输出解析
+ * 由本插件自己承担。
  */
 
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import {
-  generateSessionTitleWithLlm,
+  executeSessionTitleLlm,
   resolveSessionTitleLlmConfig,
 } from '@deepseek-ai/dsh-session-title-llm'
-import { SessionTitleProviderId } from '@deepseek-ai/dsh-session-title'
+import { SessionTitleProviderId, normalizeSessionTitle } from '@deepseek-ai/dsh-session-title'
 import z from '@deepseek-ai/schemastery'
 
 export const name = 'dsh-brief-session-title'
@@ -38,13 +39,6 @@ const DEFAULTS = Object.freeze({
   maxOutputTokens: 64,
   timeoutMs: 60000,
 })
-
-/** 官方 systemPrompt() 会读取这两个目标长度；本插件提示词写死了长度规则，
- *  这里只填入满足共享解析器校验的最小合法值。 */
-const INERT_TARGETS = Object.freeze({ targetWords: 1, targetCjkCharacters: 1 })
-
-/** 记录辅助标题调用的会话事件类型。 */
-const TITLE_REQUEST_EVENT = 'session/title-llm-request'
 
 /**
  * 自定义系统提示词：只改文字，不改任何调用策略。
@@ -77,6 +71,64 @@ const SYSTEM_PROMPT = [
   'e. Schema review',
 ].join('\n')
 
+/** 用 JSON 包裹消息，用户文本无法破坏结构分隔符（与官方一致）。 */
+function frameMessages(messages) {
+  return `Generate the session title from this JSON array of human messages:\n${JSON.stringify(messages)}`
+}
+
+/** 整行被星号强调包裹的形式，如 `**Title**`。 */
+const EMPHASIS_WRAPPER = /^(?<marker>\*{1,3})(?<inner>\S(?:.*\S)?)\k<marker>$/u
+
+/**
+ * 从模型输出取标题：第一个非空行，去掉整行的星号强调。
+ * 模型偶尔无视单行要求，把标题放第一行、说明放后面。
+ */
+function titleFromOutput(text) {
+  const line = text
+    .split(/\r?\n/u)
+    .map((item) => item.trim())
+    .find((item) => item.length > 0) ?? ''
+  const groups = EMPHASIS_WRAPPER.exec(line)?.groups
+  const marker = groups?.marker
+  const inner = groups?.inner
+  return marker === void 0 || inner === void 0 || inner.includes(marker) ? line : inner
+}
+
+/**
+ * 拒绝 tool-call 与 max-tokens 终止，并从文本块推出非空标题。
+ * @param response - executeSessionTitleLlm 的返回值：文本块、终止原因与实际路由。
+ * @returns 归一化后的单行标题。
+ */
+function titleFromResponse(response) {
+  switch (response.finish.kind) {
+    case 'stop':
+      break
+    case 'tool-calls':
+      throw new Error('session-title-llm: title output must contain text only')
+    case 'max-tokens':
+      throw new Error('session-title-llm: title output reached maxOutputTokens')
+    default:
+      throw new Error(`session-title-llm: unexpected finish ${JSON.stringify(response.finish)}`)
+  }
+  if (response.blocks.some((block) => block.type === 'tool-call')) {
+    throw new Error('session-title-llm: title output must contain text only')
+  }
+  const title = normalizeSessionTitle(
+    titleFromOutput(
+      response.blocks
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join(' '),
+    ),
+    Number.MAX_SAFE_INTEGER,
+  )
+  if (title.length === 0) throw new Error('session-title-llm: title model produced no text')
+  return title
+}
+
+/** 选择路由支持的最低推理档位（与官方一致）。 */
+const selectReasoningEffort = (model) => model.reasoning?.efforts[0]?.id
+
 /** Loader 在 apply 之前用它校验并补全 entry config。 */
 export const Config = z.object({
   maxInputBytes: z.number().step(1).min(1).default(DEFAULTS.maxInputBytes),
@@ -88,56 +140,20 @@ export const Config = z.object({
 
 /**
  * 把入口配置补成共享解析器要求的完整形状。
+ *
+ * resolveSessionTitleLlmConfig() 会拒绝未知键，所以这里只传它认识的五个键：
+ * 旧版附加的 targetWords / targetCjkCharacters 在 0.2.1 会直接报错。
  * @param config - Loader 已校验的入口配置，可能省略数值项。
- * @returns 含惰性目标长度字段的完整配置。
+ * @returns 冻结的完整执行控制配置。
  */
 function completeConfig(config) {
   const value = config ?? {}
   return {
-    ...INERT_TARGETS,
     maxInputBytes: value.maxInputBytes ?? DEFAULTS.maxInputBytes,
     maxOutputTokens: value.maxOutputTokens ?? DEFAULTS.maxOutputTokens,
     timeoutMs: value.timeoutMs ?? DEFAULTS.timeoutMs,
     provider: value.provider,
     model: value.model,
-  }
-}
-
-/**
- * 用自定义提示词包装 ctx：官方实现只通过 ctx.llm.stream() 发起调用。
- * @param ctx - 真实插件上下文。
- * @returns 仅替换 system 的上下文视图。
- */
-function contextWithPrompt(ctx) {
-  return new Proxy(ctx, {
-    get(target, property) {
-      if (property !== 'llm') return Reflect.get(target, property, target)
-      return {
-        stream(options) {
-          return target.llm.stream({ ...options, system: SYSTEM_PROMPT })
-        },
-      }
-    },
-  })
-}
-
-/**
- * 让日志记录实际发送的提示词：官方实现会在 append 时写入它自己的 system。
- * @param request - 标题服务传入的请求（session、messages、可选 route、signal）。
- * @returns 仅改写 title-llm-request 日志字段的请求视图。
- */
-function requestWithLoggedPrompt(request) {
-  return {
-    ...request,
-    session: new Proxy(request.session, {
-      get(target, property) {
-        if (property !== 'append') return Reflect.get(target, property, target)
-        return (type, data) => target.append(
-          type,
-          type === TITLE_REQUEST_EVENT ? { ...data, system: SYSTEM_PROMPT } : data,
-        )
-      },
-    }),
   }
 }
 
@@ -153,7 +169,7 @@ export function apply(ctx, config) {
     id: titleProvider,
     automatic: 'first-prompt',
     /**
-     * @param request - 会话、可选路由、消息快照与取消信号。
+     * @param request - 会话、可选路由、消息快照、当前标题与取消信号。
      * @returns 标题、来源 seq 与实际使用的模型路由。
      */
     async generate(request) {
@@ -161,13 +177,17 @@ export function apply(ctx, config) {
       if (first === undefined) {
         throw new Error('first-prompt title provider requires one human message')
       }
-      return generateSessionTitleWithLlm(
-        contextWithPrompt(ctx),
-        resolved,
-        requestWithLoggedPrompt(request),
-        [first],
-        titleProvider,
-      )
+      const response = await executeSessionTitleLlm(ctx, resolved, request, titleProvider, {
+        system: SYSTEM_PROMPT,
+        input: frameMessages([first]),
+        messageSeqs: [first.seq],
+        selectReasoningEffort,
+      })
+      return {
+        title: titleFromResponse(response),
+        messageSeqs: [first.seq],
+        model: response.model,
+      }
     },
   })
 }
